@@ -2,25 +2,35 @@ import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ROLES, type Role } from "@/lib/constants";
 import { forbidden } from "@/server/errors";
+import { getSessionFromRequest } from "@/lib/session";
 
-// Infra360 has lightweight, role-aware DEMO auth only (see
-// src/components/layout/role-context.tsx) — there is no login/session.
-// The client sends the demo role it's currently switched to via the
-// `x-demo-role` header; this resolves it to a real seeded User row so
-// mutations have a concrete actor to attribute (audit logs, inspector,
-// notifications). This is NOT a security boundary — it exists so the
-// role-based rules below are readable and enforced consistently server-side
-// rather than only hidden/shown in the UI.
+// Infra360 now has a real (if lightweight) login — see src/app/login/** and
+// src/lib/session.ts. The role used to authorize a mutating request is read
+// server-side from the session cookie, which is authoritative; the older
+// `x-demo-role` header is kept only as a fallback for direct API calls made
+// without a browser session (curl, scripts, tooling), and defaults to
+// GOVERNMENT_ADMIN when neither is present.
 
 export function getRequestRole(request: NextRequest): Role {
+  const session = getSessionFromRequest(request);
+  if (session) return session.role;
+
   const header = request.headers.get("x-demo-role");
   if (header && (ROLES as readonly string[]).includes(header)) return header as Role;
-  return "GOVERNMENT_ADMIN"; // sensible default for direct/API-tool calls without the header
+
+  return "GOVERNMENT_ADMIN";
 }
 
-export async function getActingUser(role: Role) {
+// The concrete actor to attribute a mutation to (audit logs, inspector,
+// notifications). Prefers the real logged-in user's id; falls back to "first
+// seeded user with this role" only when there's no session (tooling/testing).
+export async function getActingUserId(request: NextRequest): Promise<string | null> {
+  const session = getSessionFromRequest(request);
+  if (session) return session.id;
+
+  const role = getRequestRole(request);
   const user = await prisma.user.findFirst({ where: { role } });
-  return user; // may be null if that role wasn't seeded; callers handle null userId gracefully
+  return user?.id ?? null;
 }
 
 export function requireRole(role: Role, allowed: Role[]) {

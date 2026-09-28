@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ASSET_WRITE_ROLES, getActingUser, getRequestRole, requireRole } from "@/server/authz";
+import { ASSET_WRITE_ROLES, getActingUserId, getRequestRole, requireRole } from "@/server/authz";
 import { handleApiError } from "@/server/errors";
 import { createRelationship, listRelationshipsForAsset } from "@/server/relationships";
 import { relationshipCreateSchema } from "@/lib/validation";
@@ -18,9 +18,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { id } = await params;
     const role = getRequestRole(request);
     requireRole(role, ASSET_WRITE_ROLES);
-    const user = await getActingUser(role);
+    const actorUserId = await getActingUserId(request);
     const body = relationshipCreateSchema.parse(await request.json());
-    const rel = await createRelationship(id, body, user?.id ?? null);
+    const rel = await createRelationship(id, body, actorUserId);
     return NextResponse.json(rel, { status: 201 });
   } catch (error) {
     return handleApiError(error);

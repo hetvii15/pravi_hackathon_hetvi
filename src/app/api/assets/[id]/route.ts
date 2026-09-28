@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assetUpdateSchema } from "@/lib/validation";
 import { getAssetDetail, updateAsset } from "@/server/assets";
-import { getRequestRole, getActingUser, requireRole, ASSET_WRITE_ROLES } from "@/server/authz";
+import { getRequestRole, getActingUserId, requireRole, ASSET_WRITE_ROLES } from "@/server/authz";
 import { handleApiError } from "@/server/errors";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -18,9 +18,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const role = getRequestRole(request);
     requireRole(role, ASSET_WRITE_ROLES);
-    const user = await getActingUser(role);
+    const actorUserId = await getActingUserId(request);
     const body = assetUpdateSchema.parse(await request.json());
-    return NextResponse.json(await updateAsset(id, body, user?.id ?? null));
+    return NextResponse.json(await updateAsset(id, body, actorUserId));
   } catch (error) {
     return handleApiError(error);
   }

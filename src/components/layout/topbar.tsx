@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Bell, ChevronDown, ShieldCheck } from "lucide-react";
+import { Menu, Bell, LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -12,31 +12,30 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { NAV_ITEMS } from "@/lib/nav";
-import { ROLES, ROLE_META } from "@/lib/constants";
+import { ROLE_META } from "@/lib/constants";
 import { useRole } from "@/components/layout/role-context";
+import { logoutAction } from "@/app/login/actions";
 
 export function Topbar() {
   const pathname = usePathname();
-  const { role, setRole } = useRole();
+  const { name, role } = useRole();
   const current = NAV_ITEMS.find(
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
   );
 
-  const initials = ROLE_META[role].label
+  const initials = name
     .split(" ")
     .map((w) => w[0])
     .join("")
-    .slice(0, 2);
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background px-4 md:px-6">
@@ -92,30 +91,25 @@ export function Topbar() {
         <Bell className="h-5 w-5" />
       </Button>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" className="gap-2 px-2" />}>
-          <Avatar className="h-7 w-7">
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <span className="hidden sm:block text-sm">{ROLE_META[role].label}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Demo role (no real login)</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {ROLES.map((r) => (
-            <DropdownMenuItem
-              key={r}
-              onClick={() => setRole(r)}
-              className={cn(r === role && "font-medium bg-accent")}
-            >
-              {ROLE_META[r].label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div className="flex items-center gap-2 pl-1">
+        <Avatar className="h-7 w-7">
+          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="hidden leading-tight sm:block">
+          <p className="text-sm font-medium">{name}</p>
+          <p className="text-xs text-muted-foreground">{ROLE_META[role].label}</p>
+        </div>
+        <form action={logoutAction}>
+          <Tooltip>
+            <TooltipTrigger render={<Button variant="ghost" size="icon" type="submit" aria-label="Log out" />}>
+              <LogOut className="h-4 w-4" />
+            </TooltipTrigger>
+            <TooltipContent>Log out</TooltipContent>
+          </Tooltip>
+        </form>
+      </div>
     </header>
   );
 }

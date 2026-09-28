@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { RoleProvider } from "@/components/layout/role-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,9 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <RoleProvider>
-          <TooltipProvider delay={200}>{children}</TooltipProvider>
-        </RoleProvider>
+        <TooltipProvider delay={200}>{children}</TooltipProvider>
       </body>
     </html>
   );

@@ -10,7 +10,7 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Demo Role</CardTitle>
+          <CardTitle className="text-sm font-medium">Account</CardTitle>
         </CardHeader>
         <CardContent>
           <RoleSettings />

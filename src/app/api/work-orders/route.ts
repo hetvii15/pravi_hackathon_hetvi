@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { workOrderCreateSchema } from "@/lib/validation";
-import { getRequestRole, getActingUser, requireRole, ASSET_WRITE_ROLES, MAINTENANCE_WRITE_ROLES } from "@/server/authz";
+import { getRequestRole, getActingUserId, requireRole, ASSET_WRITE_ROLES, MAINTENANCE_WRITE_ROLES } from "@/server/authz";
 import { handleApiError } from "@/server/errors";
 import { listWorkOrders, createWorkOrder } from "@/server/workOrders";
 
@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
   try {
     const role = getRequestRole(request);
     requireRole(role, [...ASSET_WRITE_ROLES, ...MAINTENANCE_WRITE_ROLES]);
-    const user = await getActingUser(role);
+    const actorUserId = await getActingUserId(request);
     const body = workOrderCreateSchema.parse(await request.json());
-    const result = await createWorkOrder(body, user?.id ?? null);
+    const result = await createWorkOrder(body, actorUserId);
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
     return handleApiError(error);
