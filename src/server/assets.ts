@@ -129,7 +129,7 @@ export async function createAsset(input: AssetCreateInput, actorUserId: string |
   if (!category) throw badRequest("Invalid category");
   if (existing) throw conflict(`Asset code "${input.assetCode}" is already in use`);
 
-  const { reasons: _reasons, ...risk } = calculateAssetRisk({
+  const risk = calculateAssetRisk({
     conditionScore: input.conditionScore,
     criticality: input.criticality,
     status: input.status,
@@ -139,7 +139,11 @@ export async function createAsset(input: AssetCreateInput, actorUserId: string |
 
   return prisma.$transaction(async (tx) => {
     const asset = await tx.asset.create({
-      data: { ...input, riskScore: risk.riskScore },
+      data: {
+        ...input,
+        customAttributes: input.customAttributes as Prisma.InputJsonValue | undefined,
+        riskScore: risk.riskScore,
+      },
     });
 
     await tx.lifecycleEvent.create({
@@ -177,7 +181,13 @@ export async function updateAsset(id: string, input: AssetUpdateInput, actorUser
   }
 
   return prisma.$transaction(async (tx) => {
-    const after = await tx.asset.update({ where: { id }, data: input });
+    const after = await tx.asset.update({
+      where: { id },
+      data: {
+        ...input,
+        customAttributes: input.customAttributes as Prisma.InputJsonValue | undefined,
+      },
+    });
 
     await auditFieldDiffs(tx, {
       userId: actorUserId,

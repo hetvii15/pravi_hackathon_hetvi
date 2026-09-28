@@ -50,5 +50,8 @@ next-env.d.ts
 !.vscode/extensions.json
 Thumbs.db
 
-# local Claude Code runtime state
+# local tooling state / editor agent notes
 .claude/
+.cursor/
+AGENTS.md
+CLAUDE.md

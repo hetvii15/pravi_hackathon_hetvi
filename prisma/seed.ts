@@ -436,7 +436,6 @@ async function main() {
     }
   }
 
-  const today = new Date();
   const createdAssets: { id: string; assetCode: string; deptCode: string; categoryCode: string }[] = [];
 
   let idx = 0;

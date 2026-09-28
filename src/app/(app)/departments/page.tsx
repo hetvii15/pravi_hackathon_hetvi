@@ -2,19 +2,13 @@ import { Building2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { listDepartments } from "@/server/departments";
 
-// Seed structure only (departments/categories are fixed product configuration,
-// not fabricated business data). Live asset counts per department will come
-// from the database layer.
-const DEPARTMENTS = [
-  { name: "Road & Building", code: "RB", categories: ["Road", "Bridge", "Government Building"] },
-  { name: "Water", code: "WTR", categories: ["Pipeline", "Pump", "Reservoir"] },
-  { name: "Drainage", code: "DRN", categories: ["Drain", "Manhole"] },
-  { name: "Street Lighting", code: "SL", categories: ["Streetlight", "Transformer"] },
-  { name: "Traffic", code: "TRF", categories: ["Traffic Signal", "CCTV Camera"] },
-];
+export const dynamic = "force-dynamic";
 
-export default function DepartmentsPage() {
+export default async function DepartmentsPage() {
+  const departments = await listDepartments();
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -23,23 +17,45 @@ export default function DepartmentsPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {DEPARTMENTS.map((dept) => (
-          <Card key={dept.code}>
+        {departments.map((dept) => (
+          <Card key={dept.id}>
             <CardHeader className="flex flex-row items-center gap-3 space-y-0">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <Building2 className="h-4.5 w-4.5" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <CardTitle className="text-sm font-medium">{dept.name}</CardTitle>
-                <p className="text-xs text-muted-foreground">{dept.code} · — assets</p>
+                <p className="text-xs text-muted-foreground">
+                  {dept.code} · {dept.assetCount.toLocaleString("en-IN")} assets
+                </p>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-1.5">
-              {dept.categories.map((c) => (
-                <Badge key={c} variant="outline" className="font-normal text-muted-foreground">
-                  {c}
-                </Badge>
-              ))}
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {dept.categories.map((c) => (
+                  <Badge key={c.id} variant="outline" className="font-normal text-muted-foreground">
+                    {c.name}
+                  </Badge>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 border-t pt-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Avg. condition</span>
+                  <span className="font-medium tabular-nums">{Math.round(dept.avgConditionScore)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">High risk</span>
+                  <span className="font-medium tabular-nums">{dept.highRiskCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Maintenance due</span>
+                  <span className="font-medium tabular-nums">{dept.maintenanceDueCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Overdue inspections</span>
+                  <span className="font-medium tabular-nums">{dept.overdueInspectionCount}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}

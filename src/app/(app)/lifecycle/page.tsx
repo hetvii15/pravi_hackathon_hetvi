@@ -3,10 +3,23 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FeatureList } from "@/components/feature-list";
-import { LIFECYCLE_STAGES, LIFECYCLE_META } from "@/lib/constants";
+import { LIFECYCLE_STAGES, LIFECYCLE_META, type LifecycleStage } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
+import { LifecycleDistributionChart } from "@/components/charts/lifecycle-distribution-chart";
+import { getDashboardMetrics } from "@/server/dashboard";
 
-export default function LifecyclePage() {
+export const dynamic = "force-dynamic";
+
+export default async function LifecyclePage() {
+  const metrics = await getDashboardMetrics();
+
+  const lifecycleChartData = metrics.lifecycleDistribution.map((entry) => ({
+    stage: LIFECYCLE_META[entry.stage as LifecycleStage]?.label ?? entry.stage,
+    count: entry.count,
+  }));
+
+  const hasLifecycleData = lifecycleChartData.some((entry) => entry.count > 0);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -20,11 +33,15 @@ export default function LifecyclePage() {
             <CardTitle className="text-sm font-medium">Lifecycle Stage Distribution</CardTitle>
           </CardHeader>
           <CardContent>
-            <EmptyState
-              icon={History}
-              title="No lifecycle data yet"
-              description="Once assets are seeded, this chart will show how many assets sit at each lifecycle stage, from Planned through Disposed."
-            />
+            {hasLifecycleData ? (
+              <LifecycleDistributionChart data={lifecycleChartData} />
+            ) : (
+              <EmptyState
+                icon={History}
+                title="No lifecycle data yet"
+                description="Once assets are seeded, this chart will show how many assets sit at each lifecycle stage, from Planned through Disposed."
+              />
+            )}
           </CardContent>
         </Card>
 
