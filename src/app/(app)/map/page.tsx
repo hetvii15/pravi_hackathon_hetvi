@@ -68,7 +68,7 @@ export default async function MapPage() {
         title="Map"
         description="Geospatial view of every infrastructure asset, color-coded by condition once asset data is connected."
       />
-      <Card className="flex-1 overflow-hidden p-0 min-h-[520px]">
+      <Card className="isolate flex-1 overflow-hidden p-0 min-h-[520px]">
         <MapView assets={mapped} departments={departmentOptions} />
       </Card>
     </div>

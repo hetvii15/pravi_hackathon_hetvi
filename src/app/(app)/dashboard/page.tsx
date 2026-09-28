@@ -275,7 +275,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <Card className="p-0 overflow-hidden">
+      <Card className="isolate p-0 overflow-hidden">
         <CardHeader className="border-b pt-4">
           <CardTitle className="text-sm font-medium">Asset Map Preview</CardTitle>
           <CardAction>
