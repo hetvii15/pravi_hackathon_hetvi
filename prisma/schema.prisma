@@ -1,0 +1,385 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  GOVERNMENT_ADMIN
+  DEPARTMENT_MANAGER
+  INSPECTOR
+  MAINTENANCE_OFFICER
+}
+
+enum AssetStatus {
+  PLANNED
+  PROCURED
+  UNDER_CONSTRUCTION
+  OPERATIONAL
+  MAINTENANCE
+  DAMAGED
+  FAILED
+  RETIRED
+  DISPOSED
+}
+
+enum Criticality {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum LifecycleStage {
+  PLANNED
+  PROCURED
+  CONSTRUCTED
+  INSTALLED
+  COMMISSIONED
+  OPERATIONAL
+  INSPECTION
+  MAINTENANCE
+  REPAIR
+  UPGRADE
+  REPLACEMENT_PLANNED
+  RETIRED
+  DISPOSED
+}
+
+enum WorkOrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum WorkOrderStatus {
+  REQUESTED
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceType {
+  PREVENTIVE
+  CORRECTIVE
+  EMERGENCY
+  INSPECTION_RELATED
+}
+
+enum RelationshipType {
+  CONTAINS
+  CONNECTED_TO
+  DEPENDS_ON
+  LOCATED_ON
+  SERVES
+  RELATED_TO
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  CRITICAL
+  INSPECTION_DUE
+  MAINTENANCE_DUE
+}
+
+// ============================================================
+// CORE ENTITIES
+// ============================================================
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categories AssetCategory[]
+  assets     Asset[]
+  users      User[]
+
+  @@map("departments")
+}
+
+model AssetCategory {
+  id                String   @id @default(cuid())
+  name              String
+  code              String   @unique
+  description       String?
+  departmentId      String?
+  customFieldSchema Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  assets     Asset[]
+
+  @@index([departmentId])
+  @@map("asset_categories")
+}
+
+model Vendor {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  contactPerson String?
+  phone         String?
+  email         String?
+  createdAt     DateTime @default(now())
+
+  assets Asset[]
+
+  @@map("vendors")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  departmentId String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  department    Department?    @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  inspections   Inspection[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+
+  @@index([departmentId])
+  @@map("users")
+}
+
+// ============================================================
+// ASSET
+// ============================================================
+
+model Asset {
+  id          String  @id @default(cuid())
+  assetCode   String  @unique
+  name        String
+  description String?
+
+  departmentId String
+  categoryId   String
+
+  status         AssetStatus    @default(OPERATIONAL)
+  conditionScore Int            @default(100)
+  criticality    Criticality    @default(MEDIUM)
+  riskScore      Float          @default(0)
+  lifecycleStage LifecycleStage @default(OPERATIONAL)
+
+  latitude  Float
+  longitude Float
+  address   String?
+  zone      String?
+
+  installationDate  DateTime?
+  acquisitionDate   DateTime?
+  expectedLifeYears Int?
+
+  acquisitionCost Float?
+  warrantyEndDate DateTime?
+
+  owner    String?
+  vendorId String?
+
+  lastInspectionDate DateTime?
+  nextInspectionDate DateTime?
+
+  customAttributes Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  department Department    @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  category   AssetCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  vendor     Vendor?       @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  lifecycleEvents     LifecycleEvent[]
+  inspections         Inspection[]
+  workOrders          WorkOrder[]
+  maintenanceRecords  MaintenanceRecord[]
+  documents           Document[]
+  auditLogs           AuditLog[]
+  notifications       Notification[]
+  relationshipsSource AssetRelationship[] @relation("AssetRelationshipSource")
+  relationshipsTarget AssetRelationship[] @relation("AssetRelationshipTarget")
+
+  @@index([assetCode])
+  @@index([departmentId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([criticality])
+  @@index([lifecycleStage])
+  @@index([riskScore])
+  @@index([zone])
+  @@map("assets")
+}
+
+// ============================================================
+// LIFECYCLE / INSPECTION / MAINTENANCE
+// ============================================================
+
+model LifecycleEvent {
+  id          String   @id @default(cuid())
+  assetId     String
+  eventType   String
+  eventDate   DateTime
+  description String?
+  performedBy String?
+  cost        Float?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("lifecycle_events")
+}
+
+model Inspection {
+  id               String   @id @default(cuid())
+  assetId          String
+  inspectorId      String?
+  inspectionDate   DateTime
+  conditionScore   Int
+  safetyScore      Int?
+  structuralScore  Int?
+  operationalScore Int?
+  comments         String?
+  recommendations  String?
+  createdAt        DateTime @default(now())
+
+  asset     Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  inspector User? @relation(fields: [inspectorId], references: [id], onDelete: SetNull)
+
+  @@index([assetId])
+  @@index([inspectorId])
+  @@map("inspections")
+}
+
+model WorkOrder {
+  id            String            @id @default(cuid())
+  assetId       String
+  title         String
+  description   String?
+  priority      WorkOrderPriority @default(MEDIUM)
+  status        WorkOrderStatus   @default(REQUESTED)
+  assignedTo    String?
+  createdBy     String?
+  createdAt     DateTime          @default(now())
+  dueDate       DateTime?
+  completedAt   DateTime?
+  estimatedCost Float?
+  actualCost    Float?
+  resolution    String?
+
+  asset               Asset                @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  maintenanceRecords  MaintenanceRecord[]
+
+  @@index([assetId])
+  @@index([status])
+  @@index([priority])
+  @@map("work_orders")
+}
+
+model MaintenanceRecord {
+  id              String          @id @default(cuid())
+  assetId         String
+  workOrderId     String?
+  maintenanceType MaintenanceType
+  performedDate   DateTime
+  description     String?
+  cost            Float?
+  performedBy     String?
+  result          String?
+  createdAt       DateTime        @default(now())
+
+  asset     Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+
+  @@index([assetId])
+  @@index([workOrderId])
+  @@map("maintenance_records")
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  assetId    String
+  name       String
+  type       String
+  url        String
+  uploadedBy String?
+  uploadedAt DateTime @default(now())
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("documents")
+}
+
+// ============================================================
+// AUDIT / RELATIONSHIPS / NOTIFICATIONS
+// ============================================================
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  assetId      String?
+  action       String
+  fieldChanged String?
+  oldValue     String?
+  newValue     String?
+  timestamp    DateTime @default(now())
+
+  user  User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  asset Asset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([assetId])
+  @@map("audit_logs")
+}
+
+model AssetRelationship {
+  id               String           @id @default(cuid())
+  sourceAssetId    String
+  targetAssetId    String
+  relationshipType RelationshipType
+  createdAt        DateTime         @default(now())
+
+  sourceAsset Asset @relation("AssetRelationshipSource", fields: [sourceAssetId], references: [id], onDelete: Cascade)
+  targetAsset Asset @relation("AssetRelationshipTarget", fields: [targetAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceAssetId, targetAssetId, relationshipType])
+  @@index([sourceAssetId])
+  @@index([targetAssetId])
+  @@map("asset_relationships")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  assetId   String?
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset Asset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([assetId])
+  @@map("notifications")
+}
