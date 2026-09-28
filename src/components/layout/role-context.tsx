@@ -23,9 +23,13 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   const [role, setRoleState] = useState<Role>(DEFAULT_ROLE);
 
   useEffect(() => {
+    // One-time sync from localStorage after mount: state must start at
+    // DEFAULT_ROLE on both server and client to avoid a hydration mismatch,
+    // so reading the real stored value can only happen post-mount.
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored && (ROLES as readonly string[]).includes(stored)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setRoleState(stored as Role);
       }
     } catch {

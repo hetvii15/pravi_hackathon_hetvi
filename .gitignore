@@ -49,3 +49,6 @@ next-env.d.ts
 .vscode/*
 !.vscode/extensions.json
 Thumbs.db
+
+# local Claude Code runtime state
+.claude/
